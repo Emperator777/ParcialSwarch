@@ -1,103 +1,189 @@
-import Image from "next/image";
+'use client';
 
-export default function Home() {
+import { useReducer, FormEvent } from 'react';
+
+type FormState = {
+  id_user: string;
+  monto: string;
+  isLoading: boolean;
+  error: string | null;
+  success: boolean;
+};
+
+// Definimos las acciones posibles para el reducer
+type FormAction =
+  | { type: 'SET_FIELD'; field: string; value: string }
+  | { type: 'SUBMIT_START' }
+  | { type: 'SUBMIT_SUCCESS' }
+  | { type: 'SUBMIT_ERROR'; error: string }
+  | { type: 'RESET_FORM' };
+
+// Estado inicial
+const initialState: FormState = {
+  id_user: '',
+  monto: '',
+  isLoading: false,
+  error: null,
+  success: false,
+};
+
+// Reducer function
+function formReducer(state: FormState, action: FormAction): FormState {
+  switch (action.type) {
+    case 'SET_FIELD':
+      return {
+        ...state,
+        [action.field]: action.value,
+      };
+    case 'SUBMIT_START':
+      return {
+        ...state,
+        isLoading: true,
+        error: null,
+        success: false,
+      };
+    case 'SUBMIT_SUCCESS':
+      return {
+        ...state,
+        isLoading: false,
+        success: true,
+        id_user: '',
+        monto: '',
+      };
+    case 'SUBMIT_ERROR':
+      return {
+        ...state,
+        isLoading: false,
+        error: action.error,
+      };
+    case 'RESET_FORM':
+      return initialState;
+    default:
+      return state;
+  }
+}
+
+export default function AddMoneyForm() {
+  const [state, dispatch] = useReducer(formReducer, initialState);
+
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    dispatch({
+      type: 'SET_FIELD',
+      field: e.target.name,
+      value: e.target.value,
+    });
+  };
+
+  const handleSubmit = async (e: FormEvent) => {
+    e.preventDefault();
+
+    // Validación simple
+    if (!state.id_user || !state.monto) {
+      dispatch({ type: 'SUBMIT_ERROR', error: 'Todos los campos son obligatorios' });
+      return;
+    }
+
+    if (isNaN(Number(state.monto)) || Number(state.monto) <= 0) {
+      dispatch({ type: 'SUBMIT_ERROR', error: 'La cantidad debe ser un número positivo' });
+      return;
+    }
+
+    try {
+      dispatch({ type: 'SUBMIT_START' });
+
+      // Aquí harías la llamada a tu API
+      console.dir(state);
+      const response = await fetch('/api/add-money', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          id_user: state.id_user,
+          monto: parseFloat(state.monto),
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Error al enviar los datos');
+      }
+
+      dispatch({ type: 'SUBMIT_SUCCESS' });
+    } catch (error) {
+      dispatch({
+        type: 'SUBMIT_ERROR',
+        error: error instanceof Error ? error.message : 'Error desconocido',
+      });
+    }
+  };
+
   return (
-    <div className="font-sans grid grid-rows-[20px_1fr_20px] items-center justify-items-center min-h-screen p-8 pb-20 gap-16 sm:p-20">
-      <main className="flex flex-col gap-[32px] row-start-2 items-center sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={180}
-          height={38}
-          priority
-        />
-        <ol className="font-mono list-inside list-decimal text-sm/6 text-center sm:text-left">
-          <li className="mb-2 tracking-[-.01em]">
-            Get started by editing{" "}
-            <code className="bg-black/[.05] dark:bg-white/[.06] font-mono font-semibold px-1 py-0.5 rounded">
-              src/app/page.tsx
-            </code>
-            .
-          </li>
-          <li className="tracking-[-.01em]">
-            Save and see your changes instantly.
-          </li>
-        </ol>
+    <div className='flex items-center justify-center min-w-full min-h-[100vh] p-5 bg-[#333333]'>
+    <div className="w-[35%] mx-auto p-6 bg-white rounded-lg shadow-md">
+      <h2 className="text-2xl font-bold mb-6 text-gray-800">Añadir dinero a cuenta</h2>
 
-        <div className="flex gap-4 items-center flex-col sm:flex-row">
-          <a
-            className="rounded-full border border-solid border-transparent transition-colors flex items-center justify-center bg-foreground text-background gap-2 hover:bg-[#383838] dark:hover:bg-[#ccc] font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 sm:w-auto"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={20}
-              height={20}
-            />
-            Deploy now
-          </a>
-          <a
-            className="rounded-full border border-solid border-black/[.08] dark:border-white/[.145] transition-colors flex items-center justify-center hover:bg-[#f2f2f2] dark:hover:bg-[#1a1a1a] hover:border-transparent font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 w-full sm:w-auto md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Read our docs
-          </a>
+      {state.error && (
+        <div className="mb-4 p-3 bg-red-100 text-red-700 rounded-md">
+          {state.error}
         </div>
-      </main>
-      <footer className="row-start-3 flex gap-[24px] flex-wrap items-center justify-center">
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/file.svg"
-            alt="File icon"
-            width={16}
-            height={16}
+      )}
+
+      {state.success && (
+        <div className="mb-4 p-3 bg-green-100 text-green-700 rounded-md">
+          ¡Dinero añadido correctamente!
+        </div>
+      )}
+
+      <form onSubmit={handleSubmit} className="space-y-4">
+        <div>
+          <label htmlFor="id_user" className="block text-sm font-medium text-gray-700">
+            ID de Usuario
+          </label>
+          <input
+            type="text"
+            id="id_user"
+            name="id_user"
+            value={state.id_user}
+            onChange={handleChange}
+            className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
+            disabled={state.isLoading}
           />
-          Learn
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/window.svg"
-            alt="Window icon"
-            width={16}
-            height={16}
+        </div>
+
+        <div>
+          <label htmlFor="monto" className="block text-sm font-medium text-gray-700">
+            Cantidad a añadir
+          </label>
+          <input
+            type="text"
+            id="monto"
+            name="monto"
+            value={state.monto}
+            onChange={handleChange}
+            className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
+            disabled={state.isLoading}
           />
-          Examples
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/globe.svg"
-            alt="Globe icon"
-            width={16}
-            height={16}
-          />
-          Go to nextjs.org →
-        </a>
-      </footer>
+        </div>
+
+        <div className="flex space-x-4">
+          <button
+            type="submit"
+            disabled={state.isLoading}
+            className="px-4 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            {state.isLoading ? 'Enviando...' : 'Enviar'}
+          </button>
+
+          <button
+            type="button"
+            onClick={() => dispatch({ type: 'RESET_FORM' })}
+            className="px-4 py-2 bg-gray-200 text-gray-800 rounded-md hover:bg-gray-300 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2"
+          >
+            Limpiar
+          </button>
+        </div>
+      </form>
+    </div>
     </div>
   );
 }
