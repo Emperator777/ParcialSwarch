@@ -1,9 +1,10 @@
 'use client';
 
-import { useReducer, FormEvent } from 'react';
+import { useReducer, FormEvent, useState } from 'react';
+import TransactionHistory from '../app/_components/TransactionHistory';
 
 type FormState = {
-  id_user: string;
+  user_id: string;
   monto: string;
   isLoading: boolean;
   error: string | null;
@@ -20,7 +21,7 @@ type FormAction =
 
 // Estado inicial
 const initialState: FormState = {
-  id_user: '',
+  user_id: '',
   monto: '',
   isLoading: false,
   error: null,
@@ -47,7 +48,7 @@ function formReducer(state: FormState, action: FormAction): FormState {
         ...state,
         isLoading: false,
         success: true,
-        id_user: '',
+        user_id: '',
         monto: '',
       };
     case 'SUBMIT_ERROR':
@@ -65,6 +66,7 @@ function formReducer(state: FormState, action: FormAction): FormState {
 
 export default function AddMoneyForm() {
   const [state, dispatch] = useReducer(formReducer, initialState);
+  const [refreshKey, setRefreshKey] = useState(0);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     dispatch({
@@ -78,7 +80,7 @@ export default function AddMoneyForm() {
     e.preventDefault();
 
     // Validación simple
-    if (!state.id_user || !state.monto) {
+    if (!state.user_id || !state.monto) {
       dispatch({ type: 'SUBMIT_ERROR', error: 'Todos los campos son obligatorios' });
       return;
     }
@@ -99,7 +101,7 @@ export default function AddMoneyForm() {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          id_user: state.id_user,
+          user_id: state.user_id,
           monto: parseFloat(state.monto),
         }),
       });
@@ -109,6 +111,7 @@ export default function AddMoneyForm() {
       }
 
       dispatch({ type: 'SUBMIT_SUCCESS' });
+      setRefreshKey(prev => prev + 1);
     } catch (error) {
       dispatch({
         type: 'SUBMIT_ERROR',
@@ -118,72 +121,78 @@ export default function AddMoneyForm() {
   };
 
   return (
-    <div className='flex items-center justify-center min-w-full min-h-[100vh] p-5 bg-[#333333]'>
-    <div className="w-[35%] mx-auto p-6 bg-white rounded-lg shadow-md">
-      <h2 className="text-2xl font-bold mb-6 text-gray-800">Añadir dinero a cuenta</h2>
+    <div className='flex flex-col gap-15 items-center justify-start w-full min-h-[100vh] p-5 bg-[#333333]'>
+      <div className='flex items-center justify-center bg-white w-[40%] h-[10vh] rounded-lg p-5'>
+        <h1 className='font-bold text-2xl'>Bienvenido al banco</h1>
+      </div>
+      <div className='w-full flex flex-row items-center justify-center gap-2'>
+        <div className="w-[60%] lg:w-[50%] p-6 bg-white rounded-lg shadow-md">
+          <h2 className="text-2xl font-bold mb-6 text-gray-800">Añadir dinero a cuenta</h2>
 
-      {state.error && (
-        <div className="mb-4 p-3 bg-red-100 text-red-700 rounded-md">
-          {state.error}
+          {state.error && (
+            <div className="mb-4 p-3 bg-red-100 text-red-700 rounded-md">
+              {state.error}
+            </div>
+          )}
+
+          {state.success && (
+            <div className="mb-4 p-3 bg-green-100 text-green-700 rounded-md">
+              ¡Dinero añadido correctamente!
+            </div>
+          )}
+
+          <form onSubmit={handleSubmit} className="space-y-4">
+            <div>
+              <label htmlFor="user_id" className="block text-sm font-medium text-gray-700">
+                ID de Usuario
+              </label>
+              <input
+                type="text"
+                id="user_id"
+                name="user_id"
+                value={state.user_id}
+                onChange={handleChange}
+                className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
+                disabled={state.isLoading}
+              />
+            </div>
+
+            <div>
+              <label htmlFor="monto" className="block text-sm font-medium text-gray-700">
+                Cantidad a añadir
+              </label>
+              <input
+                type="text"
+                id="monto"
+                name="monto"
+                value={state.monto}
+                onChange={handleChange}
+                className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
+                disabled={state.isLoading}
+              />
+            </div>
+
+            <div className="flex space-x-4">
+              <button
+                type="submit"
+                disabled={state.isLoading}
+                className="px-4 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {state.isLoading ? 'Enviando...' : 'Enviar'}
+              </button>
+
+              <button
+                type="button"
+                onClick={() => dispatch({ type: 'RESET_FORM' })}
+                className="px-4 py-2 bg-gray-200 text-gray-800 rounded-md hover:bg-gray-300 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2"
+              >
+                Limpiar
+              </button>
+            </div>
+          </form>
         </div>
-      )}
-
-      {state.success && (
-        <div className="mb-4 p-3 bg-green-100 text-green-700 rounded-md">
-          ¡Dinero añadido correctamente!
-        </div>
-      )}
-
-      <form onSubmit={handleSubmit} className="space-y-4">
-        <div>
-          <label htmlFor="id_user" className="block text-sm font-medium text-gray-700">
-            ID de Usuario
-          </label>
-          <input
-            type="text"
-            id="id_user"
-            name="id_user"
-            value={state.id_user}
-            onChange={handleChange}
-            className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
-            disabled={state.isLoading}
-          />
-        </div>
-
-        <div>
-          <label htmlFor="monto" className="block text-sm font-medium text-gray-700">
-            Cantidad a añadir
-          </label>
-          <input
-            type="text"
-            id="monto"
-            name="monto"
-            value={state.monto}
-            onChange={handleChange}
-            className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
-            disabled={state.isLoading}
-          />
-        </div>
-
-        <div className="flex space-x-4">
-          <button
-            type="submit"
-            disabled={state.isLoading}
-            className="px-4 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            {state.isLoading ? 'Enviando...' : 'Enviar'}
-          </button>
-
-          <button
-            type="button"
-            onClick={() => dispatch({ type: 'RESET_FORM' })}
-            className="px-4 py-2 bg-gray-200 text-gray-800 rounded-md hover:bg-gray-300 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2"
-          >
-            Limpiar
-          </button>
-        </div>
-      </form>
-    </div>
+        {/* <TransactionHistory key={refreshKey}  */}
+      </div>
     </div>
   );
 }
